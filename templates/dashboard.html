@@ -1,0 +1,179 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard | AI Text Summarizer{% endblock %}
+
+{% block content %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css') }}" />
+
+<div class="dashboard-shell">
+    <aside class="dashboard-sidebar glass">
+        <div class="sidebar-brand">
+            <i class="bi bi-stars"></i>
+            <span>AI Summarizer</span>
+        </div>
+        <nav class="sidebar-nav">
+            <a href="#" class="active"><i class="bi bi-house-door"></i> Overview</a>
+            <a href="#history"><i class="bi bi-clock-history"></i> History</a>
+            <a href="#settings"><i class="bi bi-gear"></i> Settings</a>
+        </nav>
+        <div class="sidebar-footer">
+            <p>Local AI workspace</p>
+            <small>Secure, responsive, and fast.</small>
+        </div>
+    </aside>
+
+    <main class="dashboard-main">
+        <div class="dashboard-topbar">
+            <div>
+                <h2>Document intelligence workspace</h2>
+                <p>Upload a document, generate a summary, and export it with confidence.</p>
+            </div>
+            <button class="sidebar-toggle" id="sidebarToggle" type="button">
+                <i class="bi bi-layout-sidebar-inset"></i>
+            </button>
+        </div>
+
+        <div class="row g-4">
+            <div class="col-xl-7">
+                <section class="glass panel-card">
+                    <div class="panel-header">
+                        <div>
+                            <p class="panel-label">Create summary</p>
+                            <h3>Upload files or paste your text</h3>
+                        </div>
+                    </div>
+                    <form id="summaryForm" class="upload-form" enctype="multipart/form-data">
+                        <div class="drop-zone" id="dropZone">
+                            <input type="file" id="fileInput" name="file" accept=".pdf,.docx,.ppt,.pptx,.txt" />
+                            <i class="bi bi-cloud-arrow-up"></i>
+                            <p>Drag and drop a PDF, DOCX, PPT, PPTX, or TXT file here</p>
+                            <span>Or click to browse</span>
+                        </div>
+
+                        <label class="form-label mt-3" for="textInput">Paste text</label>
+                        <textarea id="textInput" name="text" class="form-control" rows="6" placeholder="Paste a long article, transcript, or report here..."></textarea>
+
+                        <div class="row mt-3 g-3">
+                            <div class="col-md-6">
+                                <label class="form-label" for="summaryLength">Summary length</label>
+                                <select id="summaryLength" name="length" class="form-select">
+                                    <option value="short">Short</option>
+                                    <option value="medium" selected>Medium</option>
+                                    <option value="detailed">Detailed</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label" for="modelSelect">AI model</label>
+                                <select id="modelSelect" name="model" class="form-select">
+                                    <option value="bart" selected>BART</option>
+                                    <option value="pegasus">PEGASUS</option>
+                                    <option value="t5">T5</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="d-flex flex-wrap gap-3 mt-4">
+                            <button type="submit" class="btn btn-primary" id="generateBtn">
+                                <i class="bi bi-magic me-2"></i>Generate Summary
+                            </button>
+                            <div class="progress-wrapper">
+                                <div class="progress-bar" id="progressBar"></div>
+                            </div>
+                        </div>
+                    </form>
+                </section>
+            </div>
+
+            <div class="col-xl-5">
+                <section class="glass panel-card">
+                    <div class="panel-header">
+                        <div>
+                            <p class="panel-label">Live output</p>
+                            <h3>Summary insights</h3>
+                        </div>
+                        <div class="output-actions">
+                            <button class="icon-btn" id="copySummaryBtn" type="button" title="Copy summary"><i class="bi bi-clipboard"></i></button>
+                            <a class="icon-btn" id="downloadPdfBtn" href="#" title="Download PDF"><i class="bi bi-file-earmark-pdf"></i></a>
+                            <a class="icon-btn" id="downloadDocxBtn" href="#" title="Download DOCX"><i class="bi bi-file-earmark-word"></i></a>
+                        </div>
+                    </div>
+
+                    <div id="summaryOutput" class="summary-output">
+                        <div class="empty-state">
+                            <i class="bi bi-stars"></i>
+                            <h4>Your summary will appear here</h4>
+                            <p>Use the form to summarize documents and monitor the key metrics instantly.</p>
+                        </div>
+                    </div>
+
+                    <div class="stats-grid mt-4">
+                        <div class="stat-card glass">
+                            <p>Keywords</p>
+                            <strong id="keywordsValue">—</strong>
+                        </div>
+                        <div class="stat-card glass">
+                            <p>Reading time</p>
+                            <strong id="readingTimeValue">—</strong>
+                        </div>
+                        <div class="stat-card glass">
+                            <p>Word count</p>
+                            <strong id="wordCountValue">—</strong>
+                        </div>
+                        <div class="stat-card glass">
+                            <p>Characters</p>
+                            <strong id="charCountValue">—</strong>
+                        </div>
+                    </div>
+                </section>
+            </div>
+        </div>
+
+        <section class="glass panel-card mt-4" id="history">
+            <div class="panel-header">
+                <div>
+                    <p class="panel-label">Saved history</p>
+                    <h3>Recent summaries</h3>
+                </div>
+                <div class="history-tools">
+                    <input type="search" id="historySearch" class="form-control" placeholder="Search history" />
+                </div>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-dark table-hover align-middle">
+                    <thead>
+                        <tr>
+                            <th>Filename</th>
+                            <th>Summary</th>
+                            <th>Keywords</th>
+                            <th>Date</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="historyTableBody">
+                        {% for item in history %}
+                        <tr>
+                            <td>{{ item.filename }}</td>
+                            <td>{{ item.summary[:120] }}{% if item.summary|length > 120 %}...{% endif %}</td>
+                            <td>{{ item.keywords }}</td>
+                            <td>{{ item.created_at }}</td>
+                            <td>
+                                <a class="btn btn-sm btn-outline-light" href="/download/{{ item.id }}/pdf"><i class="bi bi-download me-1"></i>PDF</a>
+                                <button class="btn btn-sm btn-outline-light delete-btn" data-id="{{ item.id }}" type="button"><i class="bi bi-trash me-1"></i>Delete</button>
+                            </td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="5" class="text-center py-4">No summaries yet. Start by uploading your first document.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    </main>
+</div>
+
+<div id="toastContainer"></div>
+
+<script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
+{% endblock %}
